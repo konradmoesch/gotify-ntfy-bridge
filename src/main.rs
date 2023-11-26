@@ -1,4 +1,4 @@
-use ntfy::{Auth, Dispatcher, Payload};
+use ntfy::{Auth, Dispatcher, Payload, Priority};
 use tokio::{io::BufStream, net::TcpListener};
 use tokio::io::AsyncWriteExt;
 use tracing::info;
@@ -39,13 +39,21 @@ async fn main() -> anyhow::Result<()> {
                     let token = req.headers.get("Authorization").unwrap().split_whitespace().last().unwrap();
                     info!(?token, "token");
 
+                    let raw_body = req.body.unwrap();
+                    let body:serde_json::Value = serde_json::from_str(raw_body.as_str()).unwrap();
+                    let message = body["message"].as_str().unwrap();
+                    let title = body["title"].as_str().unwrap();
+
+                    dbg!(body.clone());
+
+                    let payload = Payload::new("pve")
+                        .message(message)
+                        .title(title);
+                    dispatcher.send(&payload).await.unwrap();
+
                     let mut response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
                     let res_status = stream.write(response.as_bytes()).await.unwrap();
                     dbg!(res_status);
-
-                    let payload = Payload::new("pve")
-                        .message(req.body.unwrap());
-                    dispatcher.send(&payload).await.unwrap();
                 },
                 Err(e) => {
                     info!(?e, "failed to parse request");
