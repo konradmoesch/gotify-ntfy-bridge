@@ -1,5 +1,6 @@
 use ntfy::{Auth, Dispatcher, Payload};
 use tokio::{io::BufStream, net::TcpListener};
+use tokio::io::AsyncWriteExt;
 use tracing::info;
 
 mod req;
@@ -37,6 +38,10 @@ async fn main() -> anyhow::Result<()> {
                     info!(?req, "incoming request");
                     let token = req.headers.get("Authorization").unwrap().split_whitespace().last().unwrap();
                     info!(?token, "token");
+
+                    let mut response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+                    let res_status = stream.write(response.as_bytes()).await.unwrap();
+                    dbg!(res_status);
 
                     let payload = Payload::new("pve")
                         .message(req.body.unwrap());
